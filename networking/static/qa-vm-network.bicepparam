@@ -8,7 +8,7 @@ param customLocationName = 'jumpstart'
 
 param networkName = 'lnet-vms'
 
-param vmSwitchName = 'ConvergedSwitch(hci)'
+param vmSwitchName = 'ConvergedSwitch(compute_management)'
 
 param addressPrefix = '192.168.200.0/24'
 
