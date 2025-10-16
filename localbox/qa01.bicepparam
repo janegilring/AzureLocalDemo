@@ -22,3 +22,7 @@ param rdpPort = '443'
 param enableAzureSpotPricing = false
 
 param azureLocalInstanceLocation = 'australiaeast'
+
+param githubAccount   = 'janegilring'
+
+param githubBranch    = 'localbox_2509'
