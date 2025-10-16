@@ -68,7 +68,7 @@ jobs:
             $storageAccountName = "azlocalvhdx657231709"
             $containerName = "vhdx"
             $blobName = "ArcBox-Win2K25.vhdx"
-            $expiryTime = (Get-Date).AddHours(4).ToString("yyyy-MM-ddTHH:mm:ssZ")
+            $expiryTime = (Get-Date).AddHours(8).ToString("yyyy-MM-ddTHH:mm:ssZ")
             $permissions = "r"  # Read-only SAS token
             $storageContext = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount
             $sasToken = New-AzStorageBlobSASToken -Container $containerName -Blob $blobName -Permission $permissions -ExpiryTime $expiryTime -Context $storageContext
@@ -90,7 +90,7 @@ jobs:
             $storageAccountName = "azlocalvhdx657231709"
             $containerName = "vhdx"
             $blobName = "ubuntu2404-base-image.vhdx"
-            $expiryTime = (Get-Date).AddHours(4).ToString("yyyy-MM-ddTHH:mm:ssZ")
+            $expiryTime = (Get-Date).AddHours(8).ToString("yyyy-MM-ddTHH:mm:ssZ")
             $permissions = "r"  # Read-only SAS token
             $storageContext = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount
             $sasToken = New-AzStorageBlobSASToken -Container $containerName -Blob $blobName -Permission $permissions -ExpiryTime $expiryTime -Context $storageContext
