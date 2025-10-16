@@ -4,7 +4,7 @@ param location = 'australiaeast'
 
 param imageName = '2025-datacenter'
 
-param customLocationName = 'oslo-qa'
+param customLocationName = 'jumpstart'
 
 param osType = 'Windows'
 

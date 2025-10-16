@@ -4,7 +4,7 @@ param location = 'australiaeast'
 
 param imageName = '2404-ubuntu'
 
-param customLocationName = 'oslo-qa'
+param customLocationName = 'jumpstart'
 
 param osType = 'Linux'
 
