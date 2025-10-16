@@ -18,7 +18,7 @@ param isMarketplaceImage = false
 
 param hciLogicalNetworkName = 'lnet-vms'
 
-param customLocationName = 'qahuboslo'
+param customLocationName = 'jumpstart'
 
 param dataDiskParams = [
   {
