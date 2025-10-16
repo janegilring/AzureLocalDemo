@@ -4,10 +4,10 @@ param location = 'australiaeast'
 
 param imageName = '2404-ubuntu'
 
-param customLocationName = 'qahuboslo'
+param customLocationName = 'oslo-qa'
 
 param osType = 'Linux'
 
 param hyperVGeneration = 'V2'
 
-param imagePath = 'https://huboslosa.blob.core.windows.net/vhds/ubuntu2404-base-image.vhdx'
+param imagePath = 'https://azlocalvhdx657231709.blob.core.windows.net/vhdx/ubuntu2404-base-image.vhdx'

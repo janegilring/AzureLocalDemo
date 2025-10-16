@@ -65,14 +65,13 @@ jobs:
             $imageName = "2025-datacenter"
             $images = az stack-hci-vm image list --resource-group $resourceGroupName | ConvertFrom-Json
             if ($images.name -notcontains $imageName) {
-            $storageAccountName = "huboslosa"
-            $containerName = "vhds"
+            $storageAccountName = "azlocalvhdx657231709"
+            $containerName = "vhdx"
             $blobName = "ArcBox-Win2K25.vhdx"
             $expiryTime = (Get-Date).AddHours(4).ToString("yyyy-MM-ddTHH:mm:ssZ")
             $permissions = "r"  # Read-only SAS token
             $storageContext = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount
-            #$sasToken = New-AzStorageBlobSASToken -Container $containerName -Blob $blobName -Permission $permissions -ExpiryTime $expiryTime -Context $storageContext
-            $sasToken = ${{ secrets.az_local_vhdx_sas_token }}
+            $sasToken = New-AzStorageBlobSASToken -Container $containerName -Blob $blobName -Permission $permissions -ExpiryTime $expiryTime -Context $storageContext
             $blobUrl = "https://$storageAccountName.blob.core.windows.net/$containerName/$($blobName)?$sasToken"
             Write-Output "Deploying image $imageName"
             New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name win2k25 -TemplateFile "storage/images/custom/main.bicep" -TemplateParameterFile "storage/images/custom/qa-win2k25.bicepparam" -imagePath $blobUrl} else
@@ -88,14 +87,13 @@ jobs:
             $imageName = "2404-ubuntu"
             $images = az stack-hci-vm image list --resource-group $resourceGroupName | ConvertFrom-Json
             if ($images.name -notcontains $imageName) {
-            $storageAccountName = "huboslosa"
-            $containerName = "vhds"
+            $storageAccountName = "azlocalvhdx657231709"
+            $containerName = "vhdx"
             $blobName = "ubuntu2404-base-image.vhdx"
             $expiryTime = (Get-Date).AddHours(4).ToString("yyyy-MM-ddTHH:mm:ssZ")
             $permissions = "r"  # Read-only SAS token
             $storageContext = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount
-            #$sasToken = New-AzStorageBlobSASToken -Container $containerName -Blob $blobName -Permission $permissions -ExpiryTime $expiryTime -Context $storageContext
-            $sasToken = ${{ secrets.az_local_vhdx_sas_token }}
+            $sasToken = New-AzStorageBlobSASToken -Container $containerName -Blob $blobName -Permission $permissions -ExpiryTime $expiryTime -Context $storageContext
             $blobUrl = "https://$storageAccountName.blob.core.windows.net/$containerName/$($blobName)?$sasToken"
             Write-Output "Deploying image $imageName"
             New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name ubuntu2404 -TemplateFile "storage/images/custom/main.bicep" -TemplateParameterFile "storage/images/custom/qa-ubuntu-2404.bicepparam" -imagePath $blobUrl} else

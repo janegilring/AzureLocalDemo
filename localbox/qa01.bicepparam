@@ -2,7 +2,7 @@ using 'main.bicep'
 
 param logAnalyticsWorkspaceName = 'LocalBox-Workspace'
 
-param tenantId = '2ffc1db7-b373-4be0-a5ec-f54edd5bf695' // HCI tenant
+param tenantId = '2c7c3c27-8b2c-4e5d-be73-03be7344c5cd'
 
 param windowsAdminUsername = 'arcdemo'
 
@@ -10,7 +10,7 @@ param windowsAdminPassword = 'ArcPassword123!!'
 
 param deployBastion = false
 
-param spnProviderId = 'aa8675e0-63de-4c2e-a00c-24197a131d15' // HCI tenant
+param spnProviderId = '75bac4d6-e2b9-4f59-beff-c7c7cb1c9f40'
 
 param autoDeployClusterResource = true
 param autoUpgradeClusterResource = false
