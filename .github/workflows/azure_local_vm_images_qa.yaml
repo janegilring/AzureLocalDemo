@@ -1,0 +1,114 @@
+name: "Deploy Azure Local VM images - qa"
+
+on:
+  workflow_dispatch:
+  #pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # Linting and validation of Bicep files.
+  # analyze:
+  #   name: Analyze repository
+  #   runs-on: ubuntu-latest
+  #   if: github.repository != 'Azure/PSRule.Rules.Azure-quickstart'
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+
+  #     # Run analysis by using the PSRule GitHub action.
+  #     - name: Run PSRule analysis
+  #       uses: microsoft/ps-rule@v2.9.0
+  #       with:
+  #         modules: PSRule.Rules.Azure
+  #         outputFormat: Sarif
+  #         outputPath: reports/ps-rule-results.sarif
+  #         summary: true
+
+  #     - name: Upload results
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: PSRule-Sarif
+  #         path: reports/ps-rule-results.sarif
+  #         retention-days: 1
+  #         if-no-files-found: error
+
+  deploy:
+    #needs: analyze
+    runs-on: ubuntu-latest
+    environment: qa
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: "OIDC Login To Tenant"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-AzPSSession: true
+
+      - name: Deploy_Azure_Local_VM_custom_image_win2k25
+        uses: azure/powershell@v2
+        with:
+          azPSVersion: "latest"
+          inlineScript: |
+            Set-AzContext -SubscriptionId ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+            $resourceGroupName = "rg-az-local-oslo-qa"
+            $imageName = "2025-datacenter"
+            $images = az stack-hci-vm image list --resource-group $resourceGroupName | ConvertFrom-Json
+            if ($images.name -notcontains $imageName) {
+            $storageAccountName = "huboslosa"
+            $containerName = "vhds"
+            $blobName = "ArcBox-Win2K25.vhdx"
+            $expiryTime = (Get-Date).AddHours(4).ToString("yyyy-MM-ddTHH:mm:ssZ")
+            $permissions = "r"  # Read-only SAS token
+            $storageContext = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount
+            #$sasToken = New-AzStorageBlobSASToken -Container $containerName -Blob $blobName -Permission $permissions -ExpiryTime $expiryTime -Context $storageContext
+            $sasToken = ${{ secrets.az_local_vhdx_sas_token }}
+            $blobUrl = "https://$storageAccountName.blob.core.windows.net/$containerName/$($blobName)?$sasToken"
+            Write-Output "Deploying image $imageName"
+            New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name win2k25 -TemplateFile "storage/images/custom/main.bicep" -TemplateParameterFile "storage/images/custom/qa-win2k25.bicepparam" -imagePath $blobUrl} else
+            {Write-Output "Image $imageName already exists - skipping deployment"}
+
+      - name: Deploy_Azure_Local_VM_custom_image_ubuntu_2404
+        uses: azure/powershell@v2
+        with:
+          azPSVersion: "latest"
+          inlineScript: |
+            Set-AzContext -SubscriptionId ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+            $resourceGroupName = "common-rg"
+            $imageName = "2404-ubuntu"
+            $images = az stack-hci-vm image list --resource-group $resourceGroupName | ConvertFrom-Json
+            if ($images.name -notcontains $imageName) {
+            $storageAccountName = "huboslosa"
+            $containerName = "vhds"
+            $blobName = "ubuntu2404-base-image.vhdx"
+            $expiryTime = (Get-Date).AddHours(4).ToString("yyyy-MM-ddTHH:mm:ssZ")
+            $permissions = "r"  # Read-only SAS token
+            $storageContext = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount
+            #$sasToken = New-AzStorageBlobSASToken -Container $containerName -Blob $blobName -Permission $permissions -ExpiryTime $expiryTime -Context $storageContext
+            $sasToken = ${{ secrets.az_local_vhdx_sas_token }}
+            $blobUrl = "https://$storageAccountName.blob.core.windows.net/$containerName/$($blobName)?$sasToken"
+            Write-Output "Deploying image $imageName"
+            New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name ubuntu2404 -TemplateFile "storage/images/custom/main.bicep" -TemplateParameterFile "storage/images/custom/qa-ubuntu-2404.bicepparam" -imagePath $blobUrl} else
+            {Write-Output "Image $imageName already exists - skipping deployment"}
+
+      - name: Deploy_Azure_Local_VM_marketplace_image_ws2025-dc-azure-edition-small
+        uses: azure/bicep-deploy@v1
+        with:
+          type: deployment
+          operation: create
+          name: Deploy_Azure_Local_VM_marketplace_images
+          scope: resourceGroup
+          resource-group-name: 'rg-az-local-oslo-qa'
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: "storage/images/marketplace/main.bicep"
+          parameters-file: "storage/images/marketplace/qa-ws2025-dc-azure-edition-small.bicepparam"

@@ -1,0 +1,117 @@
+name: "Deploy Azure Local VMs - production"
+
+on:
+  workflow_dispatch:
+  #pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # Linting and validation of Bicep files.
+  # analyze:
+  #   name: Analyze repository
+  #   runs-on: ubuntu-latest
+  #   if: github.repository != 'Azure/PSRule.Rules.Azure-quickstart'
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+
+  #     # Run analysis by using the PSRule GitHub action.
+  #     - name: Run PSRule analysis
+  #       uses: microsoft/ps-rule@v2.9.0
+  #       with:
+  #         modules: PSRule.Rules.Azure
+  #         outputFormat: Sarif
+  #         outputPath: reports/ps-rule-results.sarif
+  #         summary: true
+
+  #     - name: Upload results
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: PSRule-Sarif
+  #         path: reports/ps-rule-results.sarif
+  #         retention-days: 1
+  #         if-no-files-found: error
+
+  deploy:
+    #needs: analyze
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: "OIDC Login To Tenant"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-AzPSSession: true
+
+      - name: Deploy_vm_mgmt02
+        uses: azure/bicep-deploy@v1
+        with:
+          type: deployment
+          operation: create
+          name: Deploy_vm_mgmt02
+          #location: norwayeast
+          scope: resourceGroup
+          resource-group-name: 'rg-az-local-oslo-prod'
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: "virtual_machines/main.bicep"
+          parameters-file: "virtual_machines/mgmt02.bicepparam"
+          parameters: |
+            {
+              "adminPassword": "${{ secrets.AZURE_LOCAL_VMS_ADMIN_PASSWORD }}",
+              "domainJoinPassword": "${{ secrets.AZURE_LOCAL_VMS_ADMIN_PASSWORD }}"
+            }
+
+      - name: Deploy_vm_reg01
+        uses: azure/bicep-deploy@v1
+        with:
+          type: deployment
+          operation: create
+          name: Deploy_vm_reg01
+          #location: norwayeast
+          scope: resourceGroup
+          resource-group-name: 'rg-az-local-oslo-prod'
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: "virtual_machines/main.bicep"
+          parameters-file: "virtual_machines/reg01.bicepparam"
+          parameters: |
+            {
+              "adminPassword": "${{ secrets.AZURE_LOCAL_VMS_ADMIN_PASSWORD }}"
+            }
+
+      - name: Deploy_vm_mgmt01
+        uses: azure/bicep-deploy@v1
+        with:
+          type: deployment
+          operation: create
+          name: Deploy_vm_mgmt01
+          #location: norwayeast
+          scope: resourceGroup
+          resource-group-name: 'rg-adaptivecloud'
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: "virtual_machines/main.bicep"
+          parameters-file: "virtual_machines/mgmt01.bicepparam"
+
+      - name: Deploy_vm_git01
+        uses: azure/bicep-deploy@v1
+        with:
+          type: deployment
+          operation: create
+          name: Deploy_vm_git01
+          #location: norwayeast
+          scope: resourceGroup
+          resource-group-name: 'rg-adaptivecloud'
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          template-file: "virtual_machines/main.bicep"
+          parameters-file: "virtual_machines/git01.bicepparam"
