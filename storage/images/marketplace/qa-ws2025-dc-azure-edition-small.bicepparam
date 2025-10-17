@@ -4,7 +4,7 @@ param location = 'australiaeast'
 
 param imageName = '2025-datacenter-azure-edition-smalldisk'
 
-param customLocationName = 'qahuboslo'
+param customLocationName = 'jumpstart'
 
 param osType = 'Windows'
 
