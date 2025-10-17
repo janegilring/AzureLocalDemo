@@ -1,6 +1,6 @@
 using 'main.bicep'
 
-param name = 'mgmt02'
+param name = 'mgmt02-qa'
 
 param location = 'australiaeast'
 
