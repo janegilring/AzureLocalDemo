@@ -83,7 +83,7 @@ jobs:
           azPSVersion: "latest"
           inlineScript: |
             Set-AzContext -SubscriptionId ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-            $resourceGroupName = "common-rg"
+            $resourceGroupName = "rg-az-local-oslo-qa"
             $imageName = "2404-ubuntu"
             $images = az stack-hci-vm image list --resource-group $resourceGroupName | ConvertFrom-Json
             if ($images.name -notcontains $imageName) {
