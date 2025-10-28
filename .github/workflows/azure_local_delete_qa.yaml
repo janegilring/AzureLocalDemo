@@ -1,0 +1,183 @@
+name: "Delete Azure Local Environment - qa"
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deletion:
+        description: 'Type "DELETE" to confirm resource deletion'
+        required: true
+        type: string
+      resource_group_name:
+        description: 'Resource group name to delete (leave empty to delete all QA resources)'
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  delete-qa-environment:
+    runs-on: ubuntu-latest
+    environment: qa
+
+    steps:
+      - name: Validate deletion confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE" ]; then
+            echo "::error::You must type 'DELETE' to confirm resource deletion"
+            exit 1
+          fi
+          echo "Deletion confirmed - proceeding with resource cleanup"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "OIDC Login To Tenant"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install required Azure CLI extensions
+        run: |
+          az extension add --name k8s-runtime --upgrade
+          az extension add --name connectedk8s --upgrade
+          az extension add --name stack-hci --upgrade
+
+      - name: Delete specific resource group (if specified)
+        if: github.event.inputs.resource_group_name != ''
+        run: |
+          echo "Deleting specific resource group: ${{ github.event.inputs.resource_group_name }}"
+
+          # Check if resource group exists
+          if az group show --name "${{ github.event.inputs.resource_group_name }}" --output none 2>/dev/null; then
+            echo "Resource group ${{ github.event.inputs.resource_group_name }} found - proceeding with deletion"
+
+            # List resources that will be deleted
+            echo "Resources to be deleted:"
+            az resource list --resource-group "${{ github.event.inputs.resource_group_name }}" --output table
+
+            # Delete the resource group
+            az group delete --name "${{ github.event.inputs.resource_group_name }}" --yes --no-wait
+            echo "Deletion initiated for resource group: ${{ github.event.inputs.resource_group_name }}"
+          else
+            echo "Resource group ${{ github.event.inputs.resource_group_name }} not found"
+          fi
+
+      - name: Delete QA Azure Local resources (if no specific resource group)
+        if: github.event.inputs.resource_group_name == ''
+        run: |
+          echo "Deleting all QA Azure Local resources..."
+
+          # Define common QA resource patterns
+          QA_PATTERNS=(
+            "*-qa-*"
+            "*-qa"
+            "qa-*"
+            "rg-*-qa*"
+            "azlocal-*-qa*"
+          )
+
+          # Get all resource groups matching QA patterns
+          QA_RESOURCE_GROUPS=()
+          for pattern in "${QA_PATTERNS[@]}"; do
+            groups=$(az group list --query "[?contains(name, 'qa') || contains(name, 'QA')].name" -o tsv)
+            if [ ! -z "$groups" ]; then
+              while IFS= read -r group; do
+                if [[ ! " ${QA_RESOURCE_GROUPS[@]} " =~ " ${group} " ]]; then
+                  QA_RESOURCE_GROUPS+=("$group")
+                fi
+              done <<< "$groups"
+            fi
+          done
+
+          if [ ${#QA_RESOURCE_GROUPS[@]} -eq 0 ]; then
+            echo "No QA resource groups found"
+            exit 0
+          fi
+
+          echo "Found QA resource groups:"
+          for rg in "${QA_RESOURCE_GROUPS[@]}"; do
+            echo "  - $rg"
+          done
+
+          # Delete each QA resource group
+          for rg in "${QA_RESOURCE_GROUPS[@]}"; do
+            echo "Processing resource group: $rg"
+
+            # List resources in the group
+            echo "Resources in $rg:"
+            az resource list --resource-group "$rg" --output table
+
+            # Delete the resource group
+            echo "Deleting resource group: $rg"
+            az group delete --name "$rg" --yes --no-wait
+          done
+
+      - name: Clean up orphaned Azure Arc resources
+        run: |
+          echo "Cleaning up orphaned Azure Arc resources..."
+
+          # Delete orphaned connected clusters
+          echo "Checking for orphaned connected clusters..."
+          CONNECTED_CLUSTERS=$(az connectedk8s list --query "[?contains(name, 'qa') || contains(name, 'QA')].{name:name, resourceGroup:resourceGroup}" -o tsv)
+
+          if [ ! -z "$CONNECTED_CLUSTERS" ]; then
+            echo "Found connected clusters to clean up:"
+            echo "$CONNECTED_CLUSTERS"
+
+            while IFS=$'\t' read -r name rg; do
+              if [ ! -z "$name" ] && [ ! -z "$rg" ]; then
+                echo "Deleting connected cluster: $name in resource group: $rg"
+                az connectedk8s delete --name "$name" --resource-group "$rg" --yes || true
+              fi
+            done <<< "$CONNECTED_CLUSTERS"
+          else
+            echo "No orphaned connected clusters found"
+          fi
+
+      - name: Verify cleanup completion
+        run: |
+          echo "Verifying cleanup completion..."
+
+          # Wait a moment for deletions to register
+          sleep 30
+
+          # Check for remaining QA resources
+          remaining_groups=$(az group list --query "[?contains(name, 'qa') || contains(name, 'QA')].name" -o tsv)
+
+          if [ ! -z "$remaining_groups" ]; then
+            echo "Remaining QA resource groups (may still be deleting):"
+            echo "$remaining_groups"
+
+            # Check deletion status
+            for rg in $remaining_groups; do
+              status=$(az group show --name "$rg" --query "properties.provisioningState" -o tsv 2>/dev/null || echo "NotFound")
+              echo "  - $rg: $status"
+            done
+          else
+            echo "All QA resource groups have been removed or are being deleted"
+          fi
+
+          echo "QA environment cleanup completed successfully"
+
+      - name: Summary
+        run: |
+          echo "## Deletion Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: QA" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: Manual workflow dispatch" >> $GITHUB_STEP_SUMMARY
+          echo "- **Confirmation**: ${{ github.event.inputs.confirm_deletion }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ github.event.inputs.resource_group_name }}" != "" ]; then
+            echo "- **Target**: Specific resource group: ${{ github.event.inputs.resource_group_name }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Target**: All QA resources" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "- **Status**: Deletion initiated (resources may take time to fully delete)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the Azure portal to confirm all resources have been deleted." >> $GITHUB_STEP_SUMMARY

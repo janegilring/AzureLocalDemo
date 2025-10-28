@@ -125,6 +125,9 @@ Navigate to **Actions** tab in your GitHub repository and manually trigger the a
 - `Deploy Azure Local VMs - qa` - Deploy QA virtual machines
 - `Deploy Azure Local VMs - prod` - Deploy production virtual machines
 
+**Environment Cleanup:**
+- `Delete Azure Local Environment - qa` - Delete QA environment resources with confirmation
+
 #### Deployment Order:
 
 1. **First:** Run `Deploy Azure Local - qa` (local infrastructure)
@@ -133,6 +136,24 @@ Navigate to **Actions** tab in your GitHub repository and manually trigger the a
 4. **Fourth:** Run `Deploy Azure Local VMs - qa` or `Deploy Azure Local AKS - qa` (workloads)
 
 Each workflow can be triggered manually via the GitHub Actions UI with workflow_dispatch.
+
+### Deleting QA Environment
+
+To clean up QA resources, use the `Delete Azure Local Environment - qa` workflow:
+
+1. Navigate to **Actions** tab in your GitHub repository
+2. Select **Delete Azure Local Environment - qa** workflow
+3. Click **Run workflow**
+4. **Important**: Type `DELETE` in the confirmation field to proceed
+5. Optionally specify a specific resource group name, or leave empty to delete all QA resources
+6. Click **Run workflow** to start the deletion process
+
+**Safety Features:**
+- Requires typing "DELETE" as confirmation
+- Can target specific resource groups or all QA resources
+- Provides detailed logging of what will be deleted
+- Handles orphaned Azure Arc resources
+- Shows deletion status and remaining resources
 
 ## Parameter Files
 
